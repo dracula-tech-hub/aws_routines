@@ -1,92 +1,77 @@
 """
-Lambda to check authentication of all in/out going AWS communications
+Lambda to check authentication of all incoming/outgoing AWS communications
 """
 
-from rds_db_client import RdsDbClient
+import json
 import logging
+from typing import Dict, Any
+
+from rds_db_client import RdsDbClient
 
 
 class DatabaseClient(RdsDbClient):
     """
-    TODO
+    Database client for robot authentication.
     """
 
-    def check_robot_identifier(self, serial_number: str, identifier: str) -> bool:
+    def validate_robot(
+        self,
+        serial_number: str,
+        identifier: str,
+    ) -> bool:
         """
-        Returns whether a serial number exists and matches its identifier
+        Validates:
+        - robot exists
+        - identifier matches
+        - robot is activated
         """
-        # Check serial number
+
+        query = """
+            SELECT identifier, activated
+            FROM app_robot
+            WHERE serial_number = %(serial_number)s
+        """
+
         result = self._select_query(
-            "SELECT identifier FROM app_robot WHERE serial_number = %(serial_number)s",
+            query,
             {"serial_number": serial_number},
         )
 
-        if not result or result == []:
-            logging.error(f"Robot {serial_number} doesn't exist")
+        if not result:
+            logging.error(
+                "Robot with serial_number=%s does not exist",
+                serial_number,
+            )
             return False
-        else:
-            print(f"Found robot {serial_number}")
 
-        # Match identifier
-        if result[0][0] != identifier:
-            logging.error(f"Wrong identifier string for robot {serial_number}")
+        db_identifier, activated = result[0]
+
+        if db_identifier != identifier:
+            logging.error(
+                "Invalid identifier for robot=%s",
+                serial_number,
+            )
             return False
-        else:
-            print(f"Robot {serial_number} was identified successfully")
+
+        if not activated:
+            logging.error(
+                "Robot=%s is not activated",
+                serial_number,
+            )
+            return False
+
+        logging.info(
+            "Robot=%s authenticated successfully",
+            serial_number,
+        )
 
         return True
 
-    def check_robot_activation(self, serial_number: str) -> bool:
-        """
-        Returns whether a robot is activated
-        """
-        result = self._select_query(
-            "SELECT activated FROM app_robot WHERE serial_number = %(serial_number)s",
-            {"serial_number": serial_number},
-        )
 
-        if not result or result == []:
-            logging.error(f"Robot {serial_number} doesn't exist")
-            return False
-
-        if result[0][0] == True:
-            print(f"Robot {serial_number} is activated")
-            return True
-        else:
-            logging.error(f"Robot {serial_number} is not activated")
-            return False
-
-
-def lambda_handler(event, context):
-    print("Start of the lambda...")
-    print(event)
-
-    if "queryStringParameters" not in event:
-        return {
-            "statusCode": 400,
-            "body": json.dumps("No input data"),
-        }
-
-    parameters = event["queryStringParameters"]
-
-    if "serial_number" not in parameters or "identifier" not in parameters:
-        raise Exception("Unauthorized, missing arguments")
-
-    serial_number = parameters["serial_number"]
-    identifier = parameters["identifier"]
-
-    print(f"serial_number={serial_number}")
-    print(f"identifier={identifier}")
-
-    db_client = DatabaseClient()
-
-    authorise = "Allow"
-
-    if not db_client.check_robot_identifier(serial_number, identifier):
-        authorise = "Deny"
-
-    if not db_client.check_robot_activation(serial_number):
-        authorise = "Deny"
+def generate_policy(effect: str, resource: str) -> Dict[str, Any]:
+    """
+    Generates IAM policy response.
+    """
 
     return {
         "principalId": "user",
@@ -95,9 +80,50 @@ def lambda_handler(event, context):
             "Statement": [
                 {
                     "Action": "execute-api:Invoke",
-                    "Effect": authorise,
-                    "Resource": event["methodArn"],
+                    "Effect": effect,
+                    "Resource": resource,
                 }
             ],
         },
     }
+
+
+def lambda_handler(event, context):
+    logging.info("Starting authentication lambda")
+
+    parameters = event.get("queryStringParameters") or {}
+
+    serial_number = parameters.get("serial_number")
+    identifier = parameters.get("identifier")
+
+    if not serial_number or not identifier:
+        logging.error("Missing authentication parameters")
+
+        return {
+            "statusCode": 400,
+            "body": json.dumps("Missing authentication parameters"),
+        }
+
+    logging.info("Authenticating robot=%s", serial_number)
+
+    db_client = DatabaseClient()
+
+    if not db_client.is_connected:
+        logging.error("Database connection failed")
+
+        return {
+            "statusCode": 503,
+            "body": json.dumps("Database connection failed"),
+        }
+
+    is_authorized = db_client.validate_robot(
+        serial_number,
+        identifier,
+    )
+
+    effect = "Allow" if is_authorized else "Deny"
+
+    return generate_policy(
+        effect=effect,
+        resource=event["methodArn"],
+    )
