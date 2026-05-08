@@ -8,7 +8,7 @@ In the lambda folder:
 pip3 install --target ./app/.dependencies --system -r app/requirements.txt
 ```
 
-## Uploading Lambda functions to AWS
+## Uploading Lambda functions to AWS!
 The source code is uploaded to AWS from a remote computer.
 
 ### Configure AWS CLI
