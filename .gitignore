@@ -1,0 +1,9 @@
+**/__pycache__
+**/*.pyc
+**/.dependencies
+**/lambda.zip
+env/
+env.py
+layer/python/lib/python3.9/site-packages/msgpack*
+layer/python/lib/python3.9/site-packages/psycopg*
+layer/*.zip

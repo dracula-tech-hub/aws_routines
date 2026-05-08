@@ -1,0 +1,6 @@
+[submodule "farm_data_decoder/app/src/aws_encoding"]
+	path = farm_data_decoder/app/src/aws_encoding
+	url = ../aws_encoding.git
+[submodule "awslambda-psycopg2"]
+	path = awslambda-psycopg2
+	url = https://github.com/jkehler/awslambda-psycopg2.git
