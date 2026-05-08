@@ -68,6 +68,7 @@ class DatabaseClient(RdsDbClient):
         return True
 
 
+# generate policy
 def generate_policy(effect: str, resource: str) -> Dict[str, Any]:
     """
     Generates IAM policy response.
