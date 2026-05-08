@@ -42,3 +42,9 @@ or in short:
 ./upload_to_aws.sh
 ```
  test
+<<<<<<< HEAD
+
+Co-authored-by: name dition.nezaj.job@gmail.com
+Co-authored-by: another-name preyumkrsingh@gmail.com
+=======
+>>>>>>> 0ace4c236e7c7f3db814ab0a75a8bbfa08521e2f
