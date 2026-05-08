@@ -42,3 +42,6 @@ or in short:
 ./upload_to_aws.sh
 ```
  test
+
+Co-authored-by: name dition.nezaj.job@gmail.com
+Co-authored-by: another-name preyumkrsingh@gmail.com
