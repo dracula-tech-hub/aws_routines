@@ -88,6 +88,7 @@ def generate_policy(effect: str, resource: str) -> Dict[str, Any]:
     }
 
 
+# Lambda handler
 def lambda_handler(event, context):
     logging.info("Starting authentication lambda")
 
